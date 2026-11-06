@@ -15,4 +15,7 @@ export const config = {
   openaiMaxRetries: toInt(process.env.OPENAI_MAX_RETRIES, 2),
   ticketWebhookUrl: process.env.TICKET_WEBHOOK_URL ?? '',
   dataFile: process.env.DATA_FILE ?? 'data/db.json',
+  teacherApiKey: process.env.TEACHER_API_KEY ?? '',
+  rateLimitMax: toInt(process.env.RATE_LIMIT_MAX, 30),
+  rateLimitWindowMs: toInt(process.env.RATE_LIMIT_WINDOW_MS, 60000),
 };

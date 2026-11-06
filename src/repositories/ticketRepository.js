@@ -71,14 +71,17 @@ export async function findTicketById(id) {
   return tickets.find((t) => t.id === id) ?? null;
 }
 
+// La verificación de estado y el cierre ocurren dentro de la misma escritura serializada,
+// así dos cierres simultáneos no pueden pisarse.
 export async function resolveTicket(id, teacherReply) {
   return mutate((db) => {
     const ticket = db.tickets.find((t) => t.id === id);
-    if (!ticket) return null;
+    if (!ticket) return { outcome: 'not_found' };
+    if (ticket.status === 'RESOLVED') return { outcome: 'already_resolved' };
     ticket.status = 'RESOLVED';
     ticket.teacherReply = teacherReply;
     ticket.resolvedAt = new Date().toISOString();
-    return ticket;
+    return { outcome: 'resolved', ticket };
   });
 }
 

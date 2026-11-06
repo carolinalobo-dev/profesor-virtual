@@ -7,10 +7,10 @@
 ![Node](https://img.shields.io/badge/Node.js-20%2B-6366F1?style=flat-square&logo=nodedotjs&logoColor=white&labelColor=0C0E1F)
 ![Express](https://img.shields.io/badge/Express-4-A855F7?style=flat-square&logo=express&logoColor=white&labelColor=0C0E1F)
 ![OpenAI](https://img.shields.io/badge/OpenAI-API-10B981?style=flat-square&logo=openai&logoColor=white&labelColor=0C0E1F)
-![Tests](https://img.shields.io/badge/tests-5%20aprobados-10B981?style=flat-square&labelColor=0C0E1F)
+![Tests](https://img.shields.io/badge/tests-27%20aprobados-10B981?style=flat-square&labelColor=0C0E1F)
 ![Estado](https://img.shields.io/badge/estado-prototipo-F59E0B?style=flat-square&labelColor=0C0E1F)
 
-[Cómo levantarlo](#cómo-levantarlo) · [Qué hace](#qué-hace) · [API](#api) · [Arquitectura](#arquitectura) · [Trabajos prácticos](#trabajos-prácticos)
+[Cómo levantarlo](#cómo-levantarlo) · [Qué hace](#qué-hace) · [API](#api) · [Seguridad](#seguridad) · [Arquitectura](#arquitectura) · [Pruebas](#pruebas) · [Trabajos prácticos](#trabajos-prácticos)
 
 </div>
 
@@ -25,9 +25,11 @@
 | <img src="docs/img/chat.png" alt="Chat del alumno con derivación a ticket"> | <img src="docs/img/panel-docente.png" alt="Panel docente con métricas y bandeja de tickets"> |
 
 <details>
-<summary>Modo oscuro</summary>
+<summary>Modo oscuro y celular</summary>
 
-<img src="docs/img/panel-docente-oscuro.png" alt="Panel docente en modo oscuro">
+| Panel docente en modo oscuro | Vista en celular |
+|---|---|
+| <img src="docs/img/panel-docente-oscuro.png" alt="Panel docente en modo oscuro"> | <img src="docs/img/movil.png" alt="Vista en celular" width="320"> |
 
 </details>
 
@@ -74,7 +76,7 @@ npm run seed
 | `npm start` | Servidor en `:3000` (API + interfaz web) |
 | `npm run dev` | Igual, con recarga automática |
 | `npm run seed` | Carga consultas de ejemplo |
-| `npm test` | Pruebas de la API (5) |
+| `npm test` | Suite completa (27 pruebas) |
 
 ### Variables de entorno
 
@@ -86,6 +88,8 @@ npm run seed
 | `OPENAI_TIMEOUT_MS` / `OPENAI_MAX_RETRIES` | Timeout y reintentos ante caídas | `10000` / `2` |
 | `TICKET_WEBHOOK_URL` | Webhook al crearse un ticket | — |
 | `DATA_FILE` | Archivo de persistencia | `data/db.json` |
+| `TEACHER_API_KEY` | Clave del panel docente (vacía = acceso abierto, solo para desarrollo) | — |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` | Consultas al chat por IP y ventana | `30` / `60000` |
 
 ---
 
@@ -98,11 +102,30 @@ npm run seed
 | `PATCH` | `/api/v1/tickets/:id/resolve` | `{ teacherReply }` responde y cierra el ticket |
 | `GET` | `/api/v1/analytics/summary` | Métricas de automatización |
 
+Los endpoints de tickets y métricas son del docente: con `TEACHER_API_KEY` definida piden la cabecera `x-api-key`. El chat del alumno es público.
+
 ```bash
 curl -X POST http://localhost:3000/api/v1/chat/message \
   -H "Content-Type: application/json" \
   -d '{"studentName":"Carolina Lobo","course":"Desarrollo Web","message":"¿Cuándo es la entrega del TP3?","channel":"WebChat"}'
 ```
+
+---
+
+## Seguridad
+
+Resultado de una revisión de código del propio proyecto:
+
+| Riesgo | Medida |
+|---|---|
+| Datos de alumnos expuestos | Panel y API del docente protegidos con clave (`x-api-key`, comparación en tiempo constante) |
+| Abuso del chat y gasto de OpenAI | Límite por IP con `429` y `Retry-After`; mensajes de hasta 1000 caracteres y cuerpo de hasta 10 KB |
+| Datos de entrada | Validación y sanitización en middleware (largos, tipos, caracteres de control, canal permitido) |
+| Cierres simultáneos de un ticket | La verificación y el cierre ocurren en una misma escritura serializada; el segundo recibe `409` |
+| Caída de OpenAI | Timeout, reintentos con espera creciente y derivación a un docente |
+| XSS y clickjacking | La interfaz usa `textContent`; cabeceras CSP, `nosniff` y `X-Frame-Options` |
+
+Límites conocidos: la persistencia en archivo lee todo el JSON en cada operación (suficiente para un prototipo; para volumen real conviene una base de datos tras la capa Repository) y el límite por IP vive en memoria de un solo proceso.
 
 ---
 
@@ -133,6 +156,18 @@ agents/          subagente revisor de código (solo lectura)
 docs/            entregas de los trabajos prácticos
 tests/           pruebas con node:test
 ```
+
+---
+
+## Pruebas
+
+`npm test` corre 27 pruebas con `node:test`, sin dependencias extra:
+
+| Nivel | Qué cubre |
+|---|---|
+| Unitarias | Validación y sanitización, regla de derivación de reclamos, repositorio (escrituras concurrentes y doble cierre) |
+| Integración HTTP | Flujo completo del chat, tickets, métricas, errores `400/404/409`, cabeceras de seguridad |
+| Seguridad | Acceso al panel con y sin clave, límite de consultas |
 
 ---
 

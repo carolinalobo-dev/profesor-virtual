@@ -21,13 +21,24 @@ function toast(message, isError = false) {
   toastTimer = setTimeout(() => { node.hidden = true; }, 3200);
 }
 
+const storage = {
+  get(key) { try { return sessionStorage.getItem(key); } catch { return null; } },
+  set(key, value) { try { sessionStorage.setItem(key, value); } catch { /* sin almacenamiento */ } },
+  remove(key) { try { sessionStorage.removeItem(key); } catch { /* sin almacenamiento */ } },
+};
+
 async function api(path, options = {}) {
-  const response = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
+  const headers = { 'Content-Type': 'application/json' };
+  const teacherKey = storage.get('teacherKey');
+  if (teacherKey) headers['x-api-key'] = teacherKey;
+
+  const response = await fetch(API + path, { ...options, headers });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.success) throw new Error(body.error || 'No se pudo completar la operación.');
+  if (!response.ok || !body.success) {
+    const error = new Error(body.error || 'No se pudo completar la operación. Intentá de nuevo.');
+    error.status = response.status;
+    throw error;
+  }
   return body.data;
 }
 
@@ -66,12 +77,12 @@ const messages = $('#messages');
 
 function addMessage(role, text, ticketId) {
   const wrapper = el('div', `msg ${role}`);
-  if (role === 'bot' || role === 'error') wrapper.append(el('span', 'avatar bot', 'PV'));
+  wrapper.append(el('span', 'who', role === 'user' ? 'Vos' : 'Profesor Virtual'));
   const bubble = el('div', 'bubble');
   bubble.append(el('span', '', text));
   if (ticketId) {
-    const note = el('div', 'ticket-note', 'Ticket creado para el docente · ');
-    note.append(el('code', '', `Ticket #${ticketId.slice(0, 8)}`));
+    const note = el('div', 'ticket-note', 'Un docente va a responderte. Ticket ');
+    note.append(el('code', '', `#${ticketId.slice(0, 8)}`));
     bubble.append(note);
   }
   wrapper.append(bubble);
@@ -82,7 +93,7 @@ function addMessage(role, text, ticketId) {
 
 function showTyping() {
   const wrapper = el('div', 'msg bot typing');
-  wrapper.append(el('span', 'avatar bot', 'PV'));
+  wrapper.append(el('span', 'who', 'Profesor Virtual'));
   const bubble = el('div', 'bubble');
   bubble.append(el('i'), el('i'), el('i'));
   wrapper.append(bubble);
@@ -105,7 +116,8 @@ async function sendMessage(text) {
 
   const who = identity();
   if (!who) {
-    toast('Completá tu nombre y curso para continuar.', true);
+    toast('Completá tu nombre y tu curso para enviar la consulta.', true);
+    (!$('#studentName').value.trim() ? $('#studentName') : $('#course')).focus();
     return;
   }
 
@@ -121,7 +133,6 @@ async function sendMessage(text) {
     const data = await api('/chat/message', { method: 'POST', body: JSON.stringify({ ...who, message }) });
     typing.remove();
     addMessage('bot', data.reply, data.ticketId);
-    if (data.derivated) refreshBadge();
   } catch (error) {
     typing.remove();
     addMessage('error', error.message);
@@ -151,50 +162,72 @@ $('#chatForm').addEventListener('submit', (event) => {
 document.querySelectorAll('.chip').forEach((chip) => chip.addEventListener('click', () => sendMessage(chip.textContent)));
 ['studentName', 'course'].forEach((id) => $(`#${id}`).addEventListener('input', (event) => event.target.classList.remove('is-invalid')));
 
-addMessage('bot', '¡Hola! Soy tu Profesor Virtual. Contame tu duda sobre clases, tareas o fechas de entrega.');
+addMessage('bot', 'Hola, soy el Profesor Virtual. Contame tu duda sobre clases, tareas o fechas de entrega.');
 
 /* ---------- Panel docente ---------- */
+function showGate(errorMessage) {
+  $('#panel').hidden = true;
+  $('#gate').hidden = false;
+  $('#gateError').hidden = !errorMessage;
+  $('#gateError').textContent = errorMessage ?? '';
+  $('#gateKey').focus();
+}
+
 async function refreshBadge() {
   try {
     const pending = await api('/tickets?status=PENDING');
     const badge = $('#pendingBadge');
     badge.textContent = pending.length;
     badge.hidden = pending.length === 0;
-  } catch { /* el badge es opcional */ }
+  } catch { /* el contador es opcional */ }
 }
 
 function renderStats(summary) {
   const stats = $('#stats');
   stats.replaceChildren();
-  const items = [
-    { label: 'Consultas totales', value: summary.totalInteractions, percent: 100 },
-    { label: 'Resueltas por IA', value: `${summary.resolvedByAIPercent}%`, percent: summary.resolvedByAIPercent },
-    { label: 'Derivadas a docentes', value: `${summary.derivatedPercent}%`, percent: summary.derivatedPercent, warn: true },
-  ];
-  for (const item of items) {
-    const card = el('div', `card stat${item.warn ? ' warn' : ''}`);
-    const bar = el('div', 'bar');
-    const fill = el('span');
-    fill.style.width = `${item.percent}%`;
-    bar.append(fill);
-    card.append(el('span', 'label', item.label), el('span', 'value', String(item.value)), bar);
-    stats.append(card);
+
+  const figures = el('div', 'stat-figures');
+  for (const [value, label] of [
+    [String(summary.totalInteractions), 'consultas recibidas'],
+    [`${summary.resolvedByAIPercent}%`, 'resueltas por el Profesor Virtual'],
+    [`${summary.derivatedPercent}%`, 'derivadas a un docente'],
+  ]) {
+    const figure = el('div');
+    figure.append(el('span', 'value', value), el('span', 'label', label));
+    figures.append(figure);
   }
+
+  const split = el('div', 'split');
+  split.setAttribute('role', 'img');
+  split.setAttribute('aria-label', `${summary.resolvedByAIPercent}% resuelto por IA y ${summary.derivatedPercent}% derivado`);
+  const ia = el('span', 'ia');
+  ia.style.width = `${summary.totalInteractions ? summary.resolvedByAIPercent : 0}%`;
+  const docente = el('span', 'docente');
+  docente.style.width = `${summary.totalInteractions ? summary.derivatedPercent : 0}%`;
+  split.append(ia, docente);
+
+  const legend = el('div', 'legend');
+  for (const [cls, text] of [['ia', 'Resuelto por IA'], ['docente', 'Derivado a docente']]) {
+    const item = el('span');
+    item.append(el('i', cls), document.createTextNode(text));
+    legend.append(item);
+  }
+  stats.append(figures, split, legend);
 }
 
 function ticketCard(ticket) {
-  const card = el('article', 'ticket');
+  const resolved = ticket.status === 'RESOLVED';
+  const card = el('article', `ticket${resolved ? ' is-resolved' : ''}`);
   const top = el('div', 'ticket-top');
   top.append(
     el('strong', '', ticket.studentName),
-    el('span', 'pill channel', ticket.course),
-    el('span', 'pill channel', ticket.channel),
-    el('span', `pill ${ticket.status === 'PENDING' ? 'pending' : 'resolved'}`, ticket.status === 'PENDING' ? 'PENDIENTE' : 'RESUELTO'),
+    el('span', '', `${ticket.course} · ${ticket.channel}`),
+    el('span', 'state', resolved ? 'Resuelto' : 'Pendiente'),
   );
   card.append(top, el('p', 'summary', ticket.summary || 'Consulta derivada'), el('p', 'original', `“${ticket.originalMessage}”`));
   card.append(el('p', 'meta', `Creado ${formatDate(ticket.createdAt)}${ticket.resolvedAt ? ` · Resuelto ${formatDate(ticket.resolvedAt)}` : ''}`));
 
-  if (ticket.status === 'RESOLVED') {
+  if (resolved) {
     const reply = el('div', 'teacher-reply');
     reply.append(el('small', '', 'Respuesta del docente'), el('span', '', ticket.teacherReply));
     card.append(reply);
@@ -203,11 +236,12 @@ function ticketCard(ticket) {
 
   const form = el('form', 'reply');
   const textarea = el('textarea');
-  textarea.placeholder = 'Escribí la respuesta para el alumno…';
+  textarea.placeholder = 'Escribí la respuesta para el alumno';
+  textarea.setAttribute('aria-label', `Respuesta para ${ticket.studentName}`);
   textarea.required = true;
   textarea.maxLength = 2000;
   const actions = el('div', 'actions');
-  const button = el('button', 'btn primary', 'Responder y cerrar');
+  const button = el('button', 'btn primary', 'Responder y cerrar ticket');
   button.type = 'submit';
   actions.append(button);
   form.append(textarea, actions);
@@ -216,7 +250,7 @@ function ticketCard(ticket) {
     button.disabled = true;
     try {
       await api(`/tickets/${ticket.id}/resolve`, { method: 'PATCH', body: JSON.stringify({ teacherReply: textarea.value }) });
-      toast('Ticket resuelto');
+      toast('Ticket cerrado');
       loadTeacherPanel();
     } catch (error) {
       toast(error.message, true);
@@ -231,22 +265,40 @@ async function loadTeacherPanel() {
   try {
     const query = state.filter ? `?status=${state.filter}` : '';
     const [summary, tickets] = await Promise.all([api('/analytics/summary'), api(`/tickets${query}`)]);
+    $('#gate').hidden = true;
+    $('#panel').hidden = false;
     renderStats(summary);
+
     const list = $('#tickets');
     list.replaceChildren();
     if (tickets.length === 0) {
       const empty = el('div', 'empty');
-      empty.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 7h16v10H4zM4 7l8 6 8-6"/></svg>';
-      empty.append(el('div', '', state.filter === 'PENDING' ? 'No hay tickets pendientes. ¡Todo al día!' : 'No hay tickets para mostrar.'));
+      empty.append(
+        el('strong', '', state.filter === 'PENDING' ? 'No hay tickets pendientes' : 'No hay tickets para mostrar'),
+        el('span', '', 'Cuando un alumno haga un reclamo o una consulta personal, aparece acá.'),
+      );
       list.append(empty);
     } else {
       [...tickets].reverse().forEach((ticket) => list.append(ticketCard(ticket)));
     }
     refreshBadge();
   } catch (error) {
-    toast(error.message, true);
+    if (error.status === 401) {
+      const hadKey = Boolean(storage.get('teacherKey'));
+      storage.remove('teacherKey');
+      showGate(hadKey ? 'La clave no es correcta. Revisala e intentá de nuevo.' : undefined);
+    } else {
+      toast(error.message, true);
+    }
   }
 }
+
+$('#gateForm').addEventListener('submit', (event) => {
+  event.preventDefault();
+  storage.set('teacherKey', $('#gateKey').value);
+  $('#gateKey').value = '';
+  loadTeacherPanel();
+});
 
 document.querySelectorAll('.filter').forEach((button) => {
   button.addEventListener('click', () => {
