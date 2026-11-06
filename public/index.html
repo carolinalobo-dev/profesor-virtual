@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profesor Virtual</title>
+  <meta name="description" content="Asistente virtual para alumnos de una academia online, con derivación a docentes.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+        <rect width="32" height="32" rx="9" fill="url(#g)"/>
+        <path d="M16 7 6 12l10 5 7-3.5V20h2v-7.5L16 7Zm-6 8.6V19c0 1.7 2.7 3.5 6 3.5s6-1.8 6-3.5v-3.4L16 19l-6-3.4Z" fill="#fff"/>
+      </svg>
+      <div>
+        <strong>Profesor Virtual</strong>
+        <span>Academia online</span>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Vistas">
+      <button class="tab is-active" role="tab" data-view="student" aria-selected="true">Alumno</button>
+      <button class="tab" role="tab" data-view="teacher" aria-selected="false">Panel docente <span id="pendingBadge" class="badge" hidden>0</span></button>
+    </nav>
+    <button id="themeToggle" class="icon-btn" type="button" aria-label="Cambiar tema" title="Cambiar tema">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" fill="currentColor"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <!-- Vista alumno -->
+    <section id="view-student" class="view">
+      <aside class="card identity">
+        <h2>Tus datos</h2>
+        <p class="muted">Necesitamos identificarte antes de responder tu consulta.</p>
+        <form id="identityForm" novalidate>
+          <label>Nombre completo
+            <input id="studentName" name="studentName" autocomplete="name" maxlength="100" placeholder="Ej: Carolina Lobo" required>
+          </label>
+          <label>Curso
+            <input id="course" name="course" maxlength="100" placeholder="Ej: Desarrollo Web" required>
+          </label>
+          <label>Canal
+            <select id="channel" name="channel">
+              <option>WebChat</option>
+              <option>WhatsApp</option>
+            </select>
+          </label>
+        </form>
+        <div class="hint">
+          <strong>¿Cómo funciona?</strong>
+          <ul>
+            <li>Las dudas sobre clases, tareas y entregas se responden al instante.</li>
+            <li>Reclamos, temas personales o administrativos se derivan a un docente.</li>
+          </ul>
+        </div>
+      </aside>
+
+      <section class="card chat" aria-label="Chat con el Profesor Virtual">
+        <div class="chat-head">
+          <span class="avatar bot">PV</span>
+          <div>
+            <strong>Profesor Virtual</strong>
+            <span class="status"><i></i> En línea</span>
+          </div>
+        </div>
+        <div id="messages" class="messages" role="log" aria-live="polite"></div>
+        <div class="suggestions" id="suggestions">
+          <button type="button" class="chip">¿Cuándo es la fecha de entrega del TP3?</button>
+          <button type="button" class="chip">¿Dónde encuentro el material de la clase?</button>
+          <button type="button" class="chip">Quiero hacer un reclamo por mi nota</button>
+        </div>
+        <form id="chatForm" class="composer" autocomplete="off">
+          <textarea id="messageInput" rows="1" maxlength="1000" placeholder="Escribí tu consulta…" aria-label="Mensaje" required></textarea>
+          <button id="sendBtn" class="btn primary" type="submit">Enviar</button>
+        </form>
+      </section>
+    </section>
+
+    <!-- Vista docente -->
+    <section id="view-teacher" class="view" hidden>
+      <div class="stats" id="stats"></div>
+      <div class="card inbox">
+        <div class="inbox-head">
+          <h2>Bandeja de tickets</h2>
+          <div class="filters" role="group" aria-label="Filtrar tickets">
+            <button class="filter is-active" data-status="PENDING">Pendientes</button>
+            <button class="filter" data-status="RESOLVED">Resueltos</button>
+            <button class="filter" data-status="">Todos</button>
+          </div>
+        </div>
+        <div id="tickets" class="tickets"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

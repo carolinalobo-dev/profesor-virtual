@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-labelledby="t d">
+  <title id="t">Profesor Virtual</title>
+  <desc id="d">Banner de Profesor Virtual: asistente con IA para una academia online que deriva consultas complejas a docentes</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0C0E1F"/>
+      <stop offset="1" stop-color="#141731"/>
+    </linearGradient>
+    <radialGradient id="glowI" cx="10%" cy="0%" r="60%">
+      <stop offset="0" stop-color="#6366F1" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#6366F1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowP" cx="100%" cy="40%" r="55%">
+      <stop offset="0" stop-color="#A855F7" stop-opacity="0.40"/>
+      <stop offset="1" stop-color="#A855F7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F4F5FF"/>
+      <stop offset="0.6" stop-color="#A5B4FC"/>
+      <stop offset="1" stop-color="#D8B4FE"/>
+    </linearGradient>
+    <linearGradient id="logo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#A5B4FC" stroke-opacity="0.07" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg)"/>
+  <rect width="1200" height="300" fill="url(#grid)"/>
+  <rect width="1200" height="300" fill="url(#glowI)"/>
+  <rect width="1200" height="300" fill="url(#glowP)"/>
+
+  <g transform="translate(110 78)">
+    <rect width="144" height="144" rx="40" fill="url(#logo)"/>
+    <path d="M72 32 28 54l44 22 31-15.5V90h9V57.5L72 32ZM45 69v15c0 7.5 12 15.5 27 15.5S99 91.500 99 84V69L72 83 45 69Z" fill="#fff"/>
+  </g>
+
+  <text x="300" y="150" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="76" font-weight="800" fill="url(#title)" letter-spacing="-2">Profesor Virtual</text>
+  <text x="302" y="198" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="26" fill="#9A9FC4">Asistente con IA para una academia online</text>
+
+  <g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600">
+    <rect x="302" y="222" width="148" height="34" rx="17" fill="#6366F1" fill-opacity="0.18" stroke="#6366F1" stroke-opacity="0.5"/>
+    <text x="376" y="245" text-anchor="middle" fill="#C7D2FE">Node.js</text>
+    <rect x="462" y="222" width="148" height="34" rx="17" fill="#A855F7" fill-opacity="0.18" stroke="#A855F7" stroke-opacity="0.5"/>
+    <text x="536" y="245" text-anchor="middle" fill="#E9D5FF">Express</text>
+    <rect x="622" y="222" width="148" height="34" rx="17" fill="#10B981" fill-opacity="0.16" stroke="#10B981" stroke-opacity="0.5"/>
+    <text x="696" y="245" text-anchor="middle" fill="#A7F3D0">OpenAI</text>
+  </g>
+</svg>
